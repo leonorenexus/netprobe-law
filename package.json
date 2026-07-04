@@ -1,0 +1,10 @@
+{
+  "name": "sirpai-flood",
+  "version": "1.0.0",
+  "description": "Raw packet flood engine with Telegram bug",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
